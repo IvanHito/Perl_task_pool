@@ -1,0 +1,34 @@
+SYSTEM = Cu160Zr40
+   
+# # Whoke 
+PREC = HIGH
+# # GGA  = 91 
+# # NBANDS 
+   
+# # Smearing 
+ISMEAR = 0 
+SIGMA  = 0.1 
+   
+# # Algorithm 
+IBRION = 1
+NFREE = 16
+ISIF   = 3
+#SMASS  = 0.4
+POTIM  = 0.4
+EDIFF  = 1.0E-7
+EDIFFG = -1.0E-3
+NSW    = 400
+
+LAECHG = .TRUE.
+
+#Parallel 
+LPLANE = .FALSE.
+NPAR   = 4
+NSIM   = 1
+   
+# # Others 
+AMIX  = 0.2 
+BMIX  = 0.0001 
+ENCUT =410
+
+LREAL =.FALSE.
