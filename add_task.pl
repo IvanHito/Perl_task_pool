@@ -11,42 +11,37 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-our $gBasePath = "/home/ivan/VASP_data/Perl_task_pool";      ## should be same as in manage_pool.pl
+##our $gBasePath = "/home/ivan/VASP_data/Perl_task_pool";      ## should be same as in manage_pool.pl
+our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
-our $gFldDummy = "task_dummy_gre";
+##our $gFldDummy = "task_dummy_gre";
+our $gFldDummy = "task_dummy";
+our $gFldAllData = "all_data_files";
+
+use lib "$::gBasePath";
+use vaspSTRUCT;
 
 ###############################################################################
 ##                               The Program                                 ##
 ###############################################################################
-my $datestring = localtime();
-$::gDbgStr = "### -------- -------- $datestring\n";
-print $::gDbgStr;
-write_log_line($::gDbgStr, "No Arrow");
 
-my $rho = 1.412;
-my $nCellsX = 8;
-my $nCellsY = 12;
-my $lStr = 1.10;
-my $fnPscr;
-my $tInfo;
-
-print "Ok, let's start \n";
-print "\n";
-
-my $tPath;
-
-for ($lStr = 0.98; $lStr <= 1.05; $lStr+=0.01)
-{
-  $tInfo = sprintf("gre_armCh_ribbon_str%4.2f",$lStr);
-  $tPath = new_task($tInfo,56,1);
-  $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
-  pscr_gre_stripe_armCh($fnPscr,$rho,$nCellsX,$nCellsY,$lStr);
-  print "$tInfo\n";
+my $ctrl = $ARGV[0] // "Go";
+if ($ctrl eq "clean"){
+  print "$ctrl. \n";
+  my @args = ("rm", "-r", "$::gFldData/", "$::gFnPool");
+  system(@args) == 0 or die "system <@args> failed: $?";
+  print "Done \n\n";
+  exit();
+}
+if ($ctrl eq "help"){
+  print "Hint: Run with <clean> to remove pool data. \n\n";
+  exit();
 }
 
-print "\n";
+##test_1();
 
+mg_struct_set_1();
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -56,6 +51,182 @@ print "\n";
 #  ##   <<<   Input parameters   >>>   ##
 #  ##   <<<   ----------------   >>>   ##
 #}
+
+sub mg_struct_set_1{
+
+  my $hcpA = 3.125321549;   ## Angstrom
+  my $hcpC = 5.074289751;   ## Angstrom
+  my $hcpG = 120;           ## Degree
+  my $fccA = 4.421808165;   ## Angstrom   ???
+  my $bccA = 3.498568081;   ## Angstrom   ???
+  my $scA  = 2.952998977;   ## Angstrom   ???
+  my $dcA  = 6.677466114;   ## Angstrom   ???
+
+  my $maxAmp = 0.1;
+  my $nSamples = 10;
+  my $i;
+  my $cA;
+  my $curAmp;
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+
+  print "Mg all structures with 10% cell param distortion. \n";
+  my $vs = vaspSTRUCT->new();
+
+  print "\nHCP \n\n"; ## ==========================================================
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $hcpA * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "hcpA_".$i."_".$cA;
+    new_struct_task("hcp", $nProcs, $vs, [$cA,$hcpC,$hcpG,1,1,1,"Mg"],$strDescr,20,20,20);
+  }
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $hcpC * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "hcpC_".$i."_".$cA;
+    new_struct_task("hcp", $nProcs, $vs, [$hcpA,$cA,$hcpG,1,1,1,"Mg"],$strDescr,20,20,20);
+  }
+  print "\nFCC \n\n"; ## ==========================================================
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $fccA * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "fccA_".$i."_".$cA;
+    new_struct_task("fcc", $nProcs, $vs, [$cA,$cA,$cA,1,1,1,"Mg"],$strDescr,20,20,20);
+  }
+  print "\nBCC \n\n"; ## ==========================================================
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $bccA * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "bccA_".$i."_".$cA;
+    new_struct_task("bcc", $nProcs, $vs, [$cA,$cA,$cA,1,1,1,"Mg"],$strDescr,20,20,20);
+  }
+  print "\nSC \n\n"; ## ==========================================================
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $scA * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "scA_".$i."_".$cA;
+    new_struct_task("single", $nProcs, $vs, [$cA,$cA,$cA,1,1,1,"Mg"],$strDescr,30,30,30);
+  }
+  print "\nDC \n\n"; ## ==========================================================
+  for ($i=0; $i<=$nSamples+1; $i++){
+    $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+    $cA = $dcA * (1+$curAmp);
+    print "$cA  ";
+    $strDescr = "dcA_".$i."_".$cA;
+    new_struct_task("diamond", $nProcs, $vs, [$cA,$cA,$cA,1,1,1,"Mg"],$strDescr,20,20,20);
+  }
+
+  print "\n";
+}
+
+sub new_struct_task{
+  ##   <<<   Input parameters   >>>   ##
+  my $strType    = $_[0];  ## hcp, fcc, bcc, diamond, sc
+  my $nProcs     = $_[1];
+  my $vs         = $_[2];
+  my @strParams  = @{$_[3]};   ## parameters for structure proc ( ... , nC1, nC2, nC3, AtomType)
+  my $strAux     = $_[4] // "init";
+  my $kpt1       = $_[5] // 1;
+  my $kpt2       = $_[6] // 1;
+  my $kpt3       = $_[7] // 1;
+  ##   <<<   ----------------   >>>   ##
+  my $nps = @strParams;
+  my $tp = $strParams[$nps-1];
+  my $nC3 = $strParams[$nps-2];
+  my $nC2 = $strParams[$nps-3];
+  my $nC1 = $strParams[$nps-4];
+  my @kpts= ($kpt1,$kpt2,$kpt3);
+  #print "   Params: @strParams \n";
+  #return 0;
+  my $tInfo = sprintf("mg_%s_%1dx%1dx%1d_%s",$strType,$nC1,$nC2,$nC3,$strAux);
+  print "   Struct task $tInfo\n";
+  ##print "   Kpoints: @kpts \n";
+  my $tPath = new_task($tInfo,$nProcs,1);
+  my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+  my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
+  my $structFun = "new_struct_$strType";
+  $vs->$structFun(@strParams);
+  $vs->write_poscar($fnPscr);
+  create_KPOINTS($fnKpts,@kpts);
+  my $fnXsf = "$::gFldAllData/$tInfo.xsf";
+  $vs->write_xsf($fnXsf);
+}
+
+sub new_struct_task_distortion{
+  ##   <<<   Input parameters   >>>   ##
+  my $strType    = $_[0];      ## hcp, fcc, bcc, diamond, sc
+  my @distParams = @{$_[1]};   ## [<C11, C44, CP, V0, rand>, [<x,y,z>], n, distAmp]
+  my $nProcs     = $_[2];
+  my $vs         = $_[3];
+  my @strParams  = @{$_[4]};   ## parameters for structure proc ( ... , nC1, nC2, nC3, AtomType)
+  ##   <<<   ----------------   >>>   ##
+  my $nps = @strParams;
+  my $tp = $strParams[$nps-1];
+  my $nC3 = $strParams[$nps-2];
+  my $nC2 = $strParams[$nps-3];
+  my $nC1 = $strParams[$nps-4];
+  my $distT = $distParams[0];
+  my $ax = 0;
+  my $n = 0;
+  my $strAux = "";
+  my $curAmp = 0.0;
+  my %hax = (x => 0, y => 1, z => 2);
+  my $distFun = "distort_bvs";
+  if ($distT eq "C11"){
+    $ax = $hax{$distParams[1]};
+    $n = $distParams[2];
+    $strAux = sprintf("%s%s_%d",$distT,$distParams[1],$n);
+    $curAmp = $distParams[3];
+  } else {
+    $n = $distParams[1];
+    $strAux = sprintf("%s_%d",$distT,$n);
+    $curAmp = $distParams[2];
+  }
+  if ($distT eq "rand"){$distFun = "distort_pos";}
+  my $tInfo = sprintf("mg_%s_%1dx%1dx%1d_%s",$strType,$nC1,$nC2,$nC3,$strAux);
+  print "   Struct task $tInfo  Dist Amp = $curAmp\n";
+  my $tPath = new_task($tInfo,$nProcs,1);
+  my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+  my $structFun = "new_struct_$strType";
+  $vs->$structFun(@strParams);
+  $vs->$distFun($distT,$curAmp,$ax);
+  $vs->write_poscar($fnPscr);
+  my $fnXsf = "$::gFldAllData/$tInfo.xsf";
+  $vs->write_xsf($fnXsf);
+}
+
+sub gre_1{
+  ##   <<<   Input parameters   >>>   ##
+  ##   <<<   ----------------   >>>   ##
+  my $rho = 1.412;
+  my $nCellsX = 8;
+  my $nCellsY = 12;
+  my $lStr = 1.10;
+  my $fnPscr;
+  my $tInfo;
+  my $datestring = localtime();
+  $::gDbgStr = "### -------- -------- $datestring\n";
+  print $::gDbgStr;
+  write_log_line($::gDbgStr, "No Arrow");
+  print "Ok, let's start \n";
+  print "\n";
+  my $tPath;
+  for ($lStr = 0.98; $lStr <= 1.05; $lStr+=0.01)
+  {
+    $tInfo = sprintf("gre_armCh_ribbon_str%4.2f",$lStr);
+    $tPath = new_task($tInfo,56,1);
+    $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+    pscr_gre_stripe_armCh($fnPscr,$rho,$nCellsX,$nCellsY,$lStr);
+    print "$tInfo\n";
+  }
+  print "\n";
+}
 
 sub test_1{
   ##   <<<   Input parameters   >>>   ##
@@ -85,7 +256,7 @@ sub new_task_dummy_files{
   ##   <<<   ----------------   >>>   ##
   my $destDir = "$::gBasePath/$::gFldData/$taskPath";
   $::gDbgStr = "Copying task_dummy to $destDir \n";
-  print $::gDbgStr;
+  #print $::gDbgStr;
   write_log_line($::gDbgStr, "No Arrow");
   my @filesToCp = glob "$::gBasePath/$::$gFldDummy/*";
   my @args;
@@ -241,6 +412,23 @@ sub create_INCAR{
   print $ff "\n";
   close($ff) or die "$ff: $!";
 } ## end create_INCAR
+
+sub create_KPOINTS{
+  ##   <<<   Input parameters   >>>   ##
+  my $fn   = $_[0] // "KPOINTS";
+  my $nk1  = $_[1] // 1;
+  my $nk2  = $_[2] // 1;
+  my $nk3  = $_[3] // 1;
+  ##   <<<   ----------------   >>>   ##
+  print "File ",$fn, " will be created.\n";
+  open(my $ff, ">", $fn) or die "Can't open $fn: $!";
+  print $ff "Monkhorst Pack\n";
+  print $ff "0\n";
+  print $ff "Monkhorst Pack\n";
+  print $ff "$nk1  $nk2  $nk3 \n";
+  print $ff " 0  0  0\n";
+  close($ff) or die "$ff: $!";
+}
 
 ## --------------------------------------------------- ##
 ##                      structures                     ##

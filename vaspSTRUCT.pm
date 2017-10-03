@@ -53,6 +53,14 @@ my @aRefNames = ( "baseVs",         # array of names which can be recopied
   ##   <<<   ----------------   >>>   ##
 #}
 
+sub test_func {
+  my $self = shift;
+  ##   <<<   Input parameters   >>>   ##
+  my $farg = shift // "NA";
+  ##   <<<   ----------------   >>>   ##
+  print "\ntest_func: argument is $farg\n\n";
+}
+
 sub my_default_vals {
   my $self = shift;
   $self->set("isDefined",$VALUNDEF);
