@@ -1,4 +1,4 @@
-#!/Users/ivanl/perl5/perlbrew/perls/perl-5.16.0/bin/perl
+#!/usr/bin/perl
 
 use strict;
 use autodie;
@@ -7,6 +7,9 @@ use open ":utf8";
 ###############################################################################
 ##                               The Program                                 ##
 ###############################################################################
+
+our $gAtomType = "C"; ## used in get_type_all
+
 my $dataN = 1;
 my $reqIter = "last";
 my $num_args = $#ARGV + 1;
@@ -19,7 +22,7 @@ if ($num_args >= 2) {
 
 ## test extraction
 print "\n";
-extract_crystal_from_dyn("VASP/OUTCAR", $reqIter, "EXTRACTED_".$dataN, \&get_type_allMg);
+extract_crystal_from_dyn("VASP/OUTCAR", $reqIter, "result/EXTRACTED_".$dataN, \&get_type_all);
 print "\n";
 ###############################################################################
 ##                            sub declarations                               ##
@@ -58,7 +61,7 @@ sub extract_crystal_from_dyn{
     #print $cl;
     #last if $. == 2700;
     if ($cl =~ /Iteration/) {
-      $cl =~ /(\d+).+\(\ +(\d+)/; ## $1 - Itertation Number, $2 - scf step
+      $cl =~ /(\d+).*\(\ +(\d+)/; ## $1 - Itertation Number, $2 - scf step
       $itFound = $1;
       if (($itFound == $iterN) and ($iterN ne "last")) {last;}
     }
@@ -86,7 +89,7 @@ sub extract_crystal_from_dyn{
     open($fo, $outFn) or die "Could not open $outFn: $!";
     while($cl = <$fo>) {
       if ($cl =~ /Iteration/) {
-        $cl =~ /(\d+).+\(\ +(\d+)/; ## $1 - Itertation Number, $2 - scf step
+        $cl =~ /(\d+).*\(\ +(\d+)/; ## $1 - Itertation Number, $2 - scf step
         $itFound = $1;
         if ($itFound == $iterN) {last;}
       }
@@ -136,7 +139,7 @@ sub extract_crystal_from_dyn{
   print FOUT "CRYSTAL\n";
   print FOUT "PRIMVEC\n";
   for ($i = 0; $i<3; $i++){
-    for ($j = 0; $j<3; $j++){printf FOUT '   %9.4f ', $baseVectors[$i][$j];}
+    for ($j = 0; $j<3; $j++){printf FOUT '   %15.10f ', $baseVectors[$i][$j];}
     print FOUT "\n";
   }
   print FOUT "PRIMCOORD\n";
@@ -144,9 +147,9 @@ sub extract_crystal_from_dyn{
   for ($i = 0; $i<$nAtoms; $i++){
     $type = $funcGetType->($i+1);
     print FOUT "  $type    ";
-    for ($j = 0; $j<3; $j++){printf FOUT '%9.4f  ', $atomsInfo[$i][$j];}
+    for ($j = 0; $j<3; $j++){printf FOUT '%15.10f  ', $atomsInfo[$i][$j];}
     printf FOUT '  ';
-    for ($j = 3; $j<6; $j++){printf FOUT '%9.4f  ', $atomsInfo[$i][$j];}
+    for ($j = 3; $j<6; $j++){printf FOUT '%15.10f  ', $atomsInfo[$i][$j];}
     print FOUT "\n";
   }
   close FOUT;
@@ -168,6 +171,14 @@ sub get_type_allMg{
   my $cn = $_[0];  ## current atom number starting from 1
   ##   <<<   ----------------   >>>   ##
   my $tp = "Mg";
+  return $tp;
+}
+
+sub get_type_all{
+  ##   <<<   Input parameters   >>>   ##
+  my $cn = $_[0];  ## current atom number starting from 1
+  ##   <<<   ----------------   >>>   ##
+  my $tp = $::gAtomType;
   return $tp;
 }
 

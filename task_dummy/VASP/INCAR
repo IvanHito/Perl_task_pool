@@ -17,12 +17,12 @@ ISMEAR = 1
 SIGMA  = 0.1
 ISPIN  = 2
 
-IALGO = 38
-ISYM = 0
-MAGMOM = 28*2 0
+#IALGO = 38
+#ISYM = 0
+#MAGMOM = 28*2 0
 
 # # Algorithm
-IBRION = 2
+IBRION = -1
 ISIF   = 2
 EDIFF  = 1.0E-7
 #EDIFFG = 1.0E-4
@@ -38,9 +38,9 @@ LVHAR   =  .TRUE.
 
 #Parallel
 LPLANE = .FALSE.
-NPAR   = 4
+NPAR   = 7
 #NPAR   = 1
-NSIM   = 1
+#NSIM   = 1
 
 # # Others
 AMIX  = 0.08

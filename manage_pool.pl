@@ -8,11 +8,11 @@ use strict;
 ###############################################################################
 
 our $gSubLevel = 0;
-our $gFnLog = "log";
+our $gFnLog = "/home/ivan/git/Perl_task_pool/log";
 our $gFLog;
 our $gDbgStr;
 
-my $basePath = "/home/ivan/VASP_data/Perl_task_pool";     ## should be same as in add_task.pl
+my $basePath = "/home/ivan/git/Perl_task_pool";     ## should be same as in add_task.pl
 my $fldData = "data";                                     ## should be same as in add_task.pl
 my $fnPool = "pool";                                      ## should be same as in add_task.pl
 my $maxProc = 56;         ## maximum processors in use
@@ -62,6 +62,7 @@ foreach $cfile (@files){
 if ($foundPool == 0){die "No POOL FILE! $fnPool is not in $basePath";}
 if ($foundData == 0){die "No DATA FOLDER! $fldData is not in $basePath";}
 if ($foundRun == 0){
+  print "Create Run\n";
   open(FRUN, ">$basePath/$fnRun") or die "Could not open $fnRun: $!";
   print FRUN ("## \$gBasePath = $basePath\n## All paths are in Base Path. \n");
   print FRUN ("## nTask              name     nc          path           status     dNBeg     sNEnd\n");
@@ -178,6 +179,9 @@ while($cl = <FPOOL>){
   #print "Run steward in  $basePath/$tPath\n";
   @args = ("$basePath/start_steward.sh","$basePath/$tPath",$arrLine[0],$arrLine[2]);
   system(@args) == 0 or die "system @args failed: $?";
+  $::gDbgStr = "\n --> Set to Run ".$arrLine[1]." ".$arrLine[0]." \n\n";
+  print $::gDbgStr;
+  write_log_line($::gDbgStr, "No Arrow");
   $arrLine[4] = "run";
   write_pool_str($ftmp,$arrLine[0],$arrLine[1],$arrLine[2],$arrLine[3],$arrLine[4],$arrLine[5],$arrLine[6]);
   ## put it to run! (using tmp_run which will be copied to run after)

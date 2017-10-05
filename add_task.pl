@@ -11,8 +11,8 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-##our $gBasePath = "/home/ivan/VASP_data/Perl_task_pool";      ## should be same as in manage_pool.pl
-our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
+##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
