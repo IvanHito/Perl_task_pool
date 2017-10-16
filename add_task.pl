@@ -11,8 +11,8 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
-##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+##our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
+our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
@@ -41,7 +41,8 @@ if ($ctrl eq "help"){
 
 ##test_1();
 
-mg_struct_set_1();
+##mg_struct_set_1();
+mg_struct_set_2_distortion();
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -52,7 +53,7 @@ mg_struct_set_1();
 #  ##   <<<   ----------------   >>>   ##
 #}
 
-sub mg_struct_set_1{
+sub mg_struct_set_1 {
 
   my $hcpA = 3.125321549;   ## Angstrom
   my $hcpC = 5.074289751;   ## Angstrom
@@ -125,7 +126,96 @@ sub mg_struct_set_1{
   print "\n";
 }
 
-sub new_struct_task{
+sub mg_struct_set_2_distortion {
+
+  my $hcpA = 3.125321549;   ## Angstrom
+  my $hcpC = 5.074289751;   ## Angstrom
+  my $hcpG = 120;           ## Degree
+  my $fccA = 4.421808165;   ## Angstrom   ???
+  my $bccA = 3.498568081;   ## Angstrom   ???
+  my $scA  = 2.952998977;   ## Angstrom   ???
+  my $dcA  = 6.677466114;   ## Angstrom   ???
+
+  my $maxAmp = 0.1;
+  my $nSamples = 50;
+  my $i; my $j; my $cStruct; my $cAxes; my $cDist;
+  my $cA;
+  my $curAmp;
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+
+  ##my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
+  my @allStructs = ("hcp", "sc", "diamond");
+  ##my @allDistortions = ("C44", "CP", "V0", "rand");
+  my @allDistortions = ("C44");
+  my %hParams = (
+      "hcp"      => [$hcpA,$hcpC,$hcpG,1,1,1,"Mg"],
+      "fcc"      => [$fccA,$fccA,$fccA,1,1,1,"Mg"],
+      "bcc"      => [$bccA,$bccA,$bccA,1,1,1,"Mg"],
+      "sc"       => [$scA,$scA,$scA,1,1,1,"Mg"],
+      "diamond"  => [$dcA,$dcA,$dcA,1,1,1,"Mg"]
+    );
+  ##my @allAxes = ("x","y","z");
+  my @allAxes = ("x");
+
+  print "Mg all structures with 10% cell param distortion. \n";
+  my $vs = vaspSTRUCT->new();
+
+  my @kpts = (30, 30, 30);
+  #my $kmax = 30;
+  #my $knorm = 20;
+  #my $dnk = int($nSamples/10);
+
+  foreach $cStruct (@allStructs) {
+    @kpts = (30,30,30);
+    if ($cStruct eq "sc"){@kpts = (40,40,40)}
+    if ($cStruct eq "diamond"){@kpts = (20,20,20)}
+    print "\n$cStruct \n\n"; ## ==========================================================
+    foreach $cAxes (@allAxes) {
+      print "\n C11 $cAxes \n";
+      for ($i=0; $i<=$nSamples; $i++){
+        $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+        print "$curAmp   ->   ";
+        new_struct_task_distortion($cStruct, ["C11",$cAxes,$i,$curAmp], $nProcs, $vs, $hParams{$cStruct},\@kpts);
+      }
+      #print "\n";
+    }
+    foreach $cDist (@allDistortions) {
+      print "\n $cDist \n";
+      for ($i=0; $i<=$nSamples; $i++){
+        $curAmp = 2*$maxAmp*($i-$nSamples/2)/$nSamples;
+        print "$curAmp   ->   ";
+        new_struct_task_distortion($cStruct, [$cDist,$i,$curAmp], $nProcs, $vs, $hParams{$cStruct},\@kpts);
+      }
+      #print "\n";
+    }
+  }
+
+  print "\n";
+}
+
+sub calc_kpts {
+  ##   <<<   Input parameters   >>>   ##
+  my @bVs    = @{$_[0]};  ## vasp structure base vectors
+  ##   <<<   ----------------   >>>   ##
+  my $lu = 7.34521;
+  my $ld = 2.65769;
+  my $ku = 40;
+  my $kd = 20;
+  ##print "base vector 1 is: $bVs[0][0] $bVs[0][1] $bVs[0][2] \n";
+  my @bVmods = map { sqrt(@{$_}[0]**2 + @{$_}[1]**2 + @{$_}[2]**2) } @bVs;
+  print "   base vectors modules are: @bVmods \n";
+  my @kpts = (0,0,0);
+  for (my $i=0; $i<3; $i++){
+    $kpts[$i] = int((1-($bVmods[$i]-$ld)/($lu - $ld))*($ku-$kd) + $kd);
+    if ($kpts[$i] < 1) { $kpts[$i] = 1 }
+  }
+  print "   K points @kpts \n";
+  return @kpts;
+}
+
+sub new_struct_task {
   ##   <<<   Input parameters   >>>   ##
   my $strType    = $_[0];  ## hcp, fcc, bcc, diamond, sc
   my $nProcs     = $_[1];
@@ -158,13 +248,14 @@ sub new_struct_task{
   $vs->write_xsf($fnXsf);
 }
 
-sub new_struct_task_distortion{
+sub new_struct_task_distortion {
   ##   <<<   Input parameters   >>>   ##
   my $strType    = $_[0];      ## hcp, fcc, bcc, diamond, sc
   my @distParams = @{$_[1]};   ## [<C11, C44, CP, V0, rand>, [<x,y,z>], n, distAmp]
   my $nProcs     = $_[2];
   my $vs         = $_[3];
   my @strParams  = @{$_[4]};   ## parameters for structure proc ( ... , nC1, nC2, nC3, AtomType)
+  my @kpts       = @{$_[5]};
   ##   <<<   ----------------   >>>   ##
   my $nps = @strParams;
   my $tp = $strParams[$nps-1];
@@ -188,17 +279,33 @@ sub new_struct_task_distortion{
     $strAux = sprintf("%s_%d",$distT,$n);
     $curAmp = $distParams[2];
   }
-  if ($distT eq "rand"){$distFun = "distort_pos";}
-  my $tInfo = sprintf("mg_%s_%1dx%1dx%1d_%s",$strType,$nC1,$nC2,$nC3,$strAux);
+  ##if ($distT eq "rand"){$distFun = "distort_pos";}
+  my $tInfo = sprintf("mg_%s_%s",$strType,$strAux);
   print "   Struct task $tInfo  Dist Amp = $curAmp\n";
   my $tPath = new_task($tInfo,$nProcs,1);
   my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+  my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
   my $structFun = "new_struct_$strType";
   $vs->$structFun(@strParams);
-  $vs->$distFun($distT,$curAmp,$ax);
+
+  #my @bvs = @{$vs->baseVs};
+  #my $cx;
+  #print "Vectors before distortion\n";
+  #foreach $cx (@{$bvs[0]}){printf("  %9.5f  ",$cx) } print "\n";
+  #foreach $cx (@{$bvs[1]}){printf("  %9.5f  ",$cx) } print "\n";
+  #foreach $cx (@{$bvs[2]}){printf("  %9.5f  ",$cx) } print "\n";
+
+  if ($distT eq "rand"){
+    $distFun = "distort_pos";
+    $vs->$distFun($curAmp);
+  } else {
+    $vs->$distFun($distT,$curAmp,$ax);
+  }
+  ##my @kpts = calc_kpts($vs->baseVs);
   $vs->write_poscar($fnPscr);
-  my $fnXsf = "$::gFldAllData/$tInfo.xsf";
-  $vs->write_xsf($fnXsf);
+  create_KPOINTS($fnKpts,@kpts);
+  ##my $fnXsf = "$::gFldAllData/$tInfo.xsf";
+  ##$vs->write_xsf($fnXsf);
 }
 
 sub gre_1{
@@ -420,7 +527,7 @@ sub create_KPOINTS{
   my $nk2  = $_[2] // 1;
   my $nk3  = $_[3] // 1;
   ##   <<<   ----------------   >>>   ##
-  print "File ",$fn, " will be created.\n";
+  ##print "File ",$fn, " will be created.\n";
   open(my $ff, ">", $fn) or die "Can't open $fn: $!";
   print $ff "Monkhorst Pack\n";
   print $ff "0\n";

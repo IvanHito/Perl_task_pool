@@ -212,7 +212,7 @@ sub new_struct_diamond {
   $self->struct_base();
 }
 
-sub new_struct_single {
+sub new_struct_sc {
   my $self = shift;
   ##   <<<   Input parameters   >>>   ##
   my $diaA = $_[0];         ## dia parameter a
@@ -227,6 +227,35 @@ sub new_struct_single {
   my @bvAtoms = ([1/2, 1/2, 1/2]);
   $self->set("isDefined",$VALOK);
   $self->infoLine("Single $tp atom");
+  $self->baseVs(@baseVectors);
+  $self->baseAvs(\@bvAtoms);
+  $self->atomTypeNames([$tp]);
+  $self->nCellsArr([$nCells1,$nCells2,$nCells3]);
+  $self->struct_base();
+}
+
+sub new_struct_single {
+  my $self = shift;
+  $self->new_struct_sc(@_);
+}
+
+sub new_struct_gre {
+  my $self = shift;
+  ##   <<<   Input parameters   >>>   ##
+  my $greA = $_[0];         ## gre parameter a
+  my $greG = $_[1]*pi/180;  ## angle (originaly 60 degrees)
+  my $greC = $_[2];         ## gre parameter c
+  my $nCells1 = $_[3];      ## number of cells in direction of vector 1
+  my $nCells2 = $_[4];      ## number of cells in direction of vector 2
+  my $nCells3 = $_[5];      ## number of cells in direction of vector 3
+  my $tp = $_[6];           ## atom type
+  ##   <<<   ----------------   >>>   ##
+  my $cg = cos($greG);
+  my $sg = sin($greG);
+  my @baseVectors = ([$greA,0,0], [$greA*$cg,$greA*$sg,0], [0,0,$greC]);
+  my @bvAtoms = ([0, 0, 1/2], [1/3, 1/3, 1/2]);
+  $self->set("isDefined",$VALOK);
+  $self->infoLine(" $tp in graphene structure");
   $self->baseVs(@baseVectors);
   $self->baseAvs(\@bvAtoms);
   $self->atomTypeNames([$tp]);
@@ -504,7 +533,8 @@ sub distort_bvs {
   my @vNcs = @{$self->nCellsArr};
   my @bVMods = (0,0,0);
   for($j=0;$j<3;$j++) { $bVMods[$j] = sqrt($bVs[$j][0]**2+$bVs[$j][1]**2+$bVs[$j][2]**2); }
-  $dAmp *= $bVMods[$dAx];    ## !!! CAREFULL HERE !!!
+  ##$dAmp *= $bVMods[$dAx];    ## !!! CAREFULL HERE !!!
+  ##print "Actual amp = ", $dAmp*$bVMods[$dAx] ,"\n";
   if ($dType eq "C11"){
     @T = map {[0,0,0]} 1..3;
     $T[$dAx][$dAx] = 1;
@@ -525,6 +555,13 @@ sub distort_bvs {
     for($j=0; $j<3; $j++){$HD[$i][$j] = $bVs[$i][$j] + $HD[$i][$j]*$dAmp}
   }
   $self->baseVs(@HD);
+
+  #my @bvs = @{$self->baseVs}; my $cx;
+  #print "Vectors \n";
+  #foreach $cx (@{$bvs[0]}){printf("  %9.5f  ",$cx) } print "\n";
+  #foreach $cx (@{$bvs[1]}){printf("  %9.5f  ",$cx) } print "\n";
+  #foreach $cx (@{$bvs[2]}){printf("  %9.5f  ",$cx) } print "\n";
+
   for ($i = 0; $i<$self->nAtoms; $i++){
     for ($ix = 0; $ix<3; $ix++){
       $ainfC[$i][$ix] = 0.0;
@@ -556,6 +593,7 @@ sub distort_pos {
     for ($j=0; $j<3; $j++)
     {
       $ainfD[$i][$j] += 2*(rand() - 0.5)*$dAmp/$bVMods[$j];
+      ##$ainfD[$i][$j] += 2*(rand() - 0.5)*$dAmp;
       if ($ainfD[$i][$j] > 1.0) { $ainfD[$i][$j] -= 1.0; }
       if ($ainfD[$i][$j] < 0.0) { $ainfD[$i][$j] += 1.0; }
       $ainfD[$i][$j] = sprintf("%20.17f",$ainfD[$i][$j]);
