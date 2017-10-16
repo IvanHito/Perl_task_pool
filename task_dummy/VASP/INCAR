@@ -1,34 +1,22 @@
-### ================================================ ###
-###                This is dummy file                ###
-###               it should be replaced              ###
-### ================================================ ###
-SYSTEM = FeGBs
+SYSTEM =Mg
 
 # # Whoke
-PREC = ACCURATE
+PREC =HIGH
 ENCUT = 400
 # # GGA  = 91
 # # NBANDS
 
 # # Smearing
-#ISMEAR = 0
-##ISMEAR = -5
 ISMEAR = 1
 SIGMA  = 0.1
 ISPIN  = 2
-
-#IALGO = 38
-#ISYM = 0
-#MAGMOM = 28*2 0
 
 # # Algorithm
 IBRION = -1
 ISIF   = 2
 EDIFF  = 1.0E-7
-#EDIFFG = 1.0E-4
 EDIFFG = -1.0E-2
 NSW    = 1
-#NSW = 100
 LREAL= False
 
 LWAVE   =  .TRUE.
@@ -39,15 +27,12 @@ LVHAR   =  .TRUE.
 #Parallel
 LPLANE = .FALSE.
 NPAR   = 7
-#NPAR   = 1
 #NSIM   = 1
 
 # # Others
 AMIX  = 0.08
 BMIX  = 1.0
 ICHARG = 2
-# ENCUT =410
-#LORBIT = 10
 
 
 # # DOS
@@ -56,5 +41,4 @@ ICHARG = 2
 SIGMA =0.2
 EMIN  =-10
 EMAX  =10
-##NPAR  = 1
 LORBIT = 10
