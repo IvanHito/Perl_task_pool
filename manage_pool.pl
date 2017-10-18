@@ -230,7 +230,7 @@ print "\n";
 
 sub write_pool_str{
   my $fh = $_[0];
-  my $pStr = sprintf("  %05d     %15s  %2d  %20s  %8s  %8d  %8d\n",
+  my $pStr = sprintf("  %05d     %25s  %2d  %20s  %8s  %8d  %8d\n",
     $_[1],$_[2],$_[3],$_[4],$_[5],$_[6],$_[7]);
   print $fh $pStr;
 }

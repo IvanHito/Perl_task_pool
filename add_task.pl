@@ -11,8 +11,8 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-##our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
-our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
+##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
@@ -145,10 +145,10 @@ sub mg_struct_set_2_distortion {
   my $strDescr = "na";
   my $nProcs = 56;
 
-  ##my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
-  my @allStructs = ("hcp", "sc", "diamond");
-  ##my @allDistortions = ("C44", "CP", "V0", "rand");
-  my @allDistortions = ("C44");
+  my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
+  ##my @allStructs = ("hcp", "sc", "diamond");
+  my @allDistortions = ("C44", "CP", "V0");
+  ##my @allDistortions = ("C44");
   my %hParams = (
       "hcp"      => [$hcpA,$hcpC,$hcpG,1,1,1,"Mg"],
       "fcc"      => [$fccA,$fccA,$fccA,1,1,1,"Mg"],
@@ -156,8 +156,9 @@ sub mg_struct_set_2_distortion {
       "sc"       => [$scA,$scA,$scA,1,1,1,"Mg"],
       "diamond"  => [$dcA,$dcA,$dcA,1,1,1,"Mg"]
     );
-  ##my @allAxes = ("x","y","z");
-  my @allAxes = ("x");
+  my $pParams;
+  my @allAxes = ("x","y","z");
+  ##my @allAxes = ("x");
 
   print "Mg all structures with 10% cell param distortion. \n";
   my $vs = vaspSTRUCT->new();
@@ -189,6 +190,14 @@ sub mg_struct_set_2_distortion {
         new_struct_task_distortion($cStruct, [$cDist,$i,$curAmp], $nProcs, $vs, $hParams{$cStruct},\@kpts);
       }
       #print "\n";
+    }
+    print "\n rand \n";
+    $pParams = $hParams{$cStruct};
+    if ($cStruct eq "sc"){ $pParams = [$scA,$scA,$scA,2,2,2,"Mg"] }
+    for ($i=1; $i<=$nSamples; $i++){
+      $curAmp = $maxAmp*$i/$nSamples;
+      print "$curAmp   ->   ";
+      new_struct_task_distortion($cStruct, ["rand",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
     }
   }
 
@@ -304,8 +313,8 @@ sub new_struct_task_distortion {
   ##my @kpts = calc_kpts($vs->baseVs);
   $vs->write_poscar($fnPscr);
   create_KPOINTS($fnKpts,@kpts);
-  ##my $fnXsf = "$::gFldAllData/$tInfo.xsf";
-  ##$vs->write_xsf($fnXsf);
+  my $fnXsf = "$::gFldAllData/$tInfo.xsf";
+  $vs->write_xsf($fnXsf);
 }
 
 sub gre_1{
@@ -352,7 +361,7 @@ sub test_1{
 
 sub write_pool_str{
   my $fh = $_[0];
-  my $pStr = sprintf("  %05d     %15s  %2d  %20s  %8s  %8d  %8d\n",
+  my $pStr = sprintf("  %05d     %30s  %2d  %20s  %8s  %8d  %8d\n",
     $_[1],$_[2],$_[3],$_[4],$_[5],$_[6],$_[7]);
   print $fh $pStr;
 }
