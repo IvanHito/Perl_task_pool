@@ -8,7 +8,7 @@ use open ":utf8";
 ##                               The Program                                 ##
 ###############################################################################
 
-our $gAtomType = "C"; ## used in get_type_all
+our $gAtomType = "Mg"; ## used in get_type_all
 
 my $dataN = 1;
 my $reqIter = "last";

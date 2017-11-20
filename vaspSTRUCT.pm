@@ -226,7 +226,7 @@ sub new_struct_sc {
   my @baseVectors = ([$diaA,0,0], [0,$diaB,0], [0,0,$diaC]);
   my @bvAtoms = ([1/2, 1/2, 1/2]);
   $self->set("isDefined",$VALOK);
-  $self->infoLine("Single $tp atom");
+  $self->infoLine("Simple cubic $tp structure");
   $self->baseVs(@baseVectors);
   $self->baseAvs(\@bvAtoms);
   $self->atomTypeNames([$tp]);
