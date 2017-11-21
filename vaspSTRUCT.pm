@@ -145,6 +145,31 @@ sub new_struct_hcp {
   $self->struct_base();
 }
 
+## <<<<<<<<<<<<<<<<<<<<<<<============================================= !!! 
+sub new_struct_hcp_v {
+  my $self = shift;
+  ##   <<<   Input parameters   >>>   ##
+  my $hcpA = $_[0];         ## hcp parameter a
+  my $hcpC = $_[1];         ## hcp parameter c
+  my $hcpG = $_[2]*pi/180;  ## hcp angle (initially in degrees)
+  my $nCells1 = $_[3];      ## number of cells in direction of vector 1
+  my $nCells2 = $_[4];      ## number of cells in direction of vector 2
+  my $nCells3 = $_[5];      ## number of cells in direction of vector 3
+  my $tp = $_[6];           ## atom type
+  ##   <<<   ----------------   >>>   ##
+  my $cg = cos($hcpG);
+  my $sg = sin($hcpG);
+  my @baseVectors = ([$hcpA,0,0], [$hcpA*$cg,$hcpA*$sg,0], [0,0,$hcpC]);
+  my @bvAtoms = ([0,0,0], [1/3, 2/3, 0.5]);
+  $self->set("isDefined",$VALOK);
+  $self->infoLine("Pure $tp hcp structure");
+  $self->baseVs(@baseVectors);
+  $self->baseAvs(@bvAtoms);
+  $self->atomTypeNames([$tp]);
+  $self->nCellsArr([$nCells1,$nCells2,$nCells3]);
+  $self->struct_base();
+}
+
 sub new_struct_fcc {
   my $self = shift;
   ##   <<<   Input parameters   >>>   ##

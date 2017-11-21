@@ -23,6 +23,18 @@ use lib "$::gBasePath";
 use vaspSTRUCT;
 
 ###############################################################################
+##                           Structure Constants                             ##
+###############################################################################
+
+our $MG_HCP_A      = 3.125321549;   ## Angstrom
+our $MG_HCP_C      = 5.074289751;   ## Angstrom
+our $MG_HCP_G      = 120;           ## Degree
+our $MG_FCC_A      = 4.421808165;   ## Angstrom   ???
+our $MG_BCC_A      = 3.498568081;   ## Angstrom   ???
+our $MG_SC_A       = 2.952998977;   ## Angstrom   ???
+our $MG_DIAMOND_A  = 6.677466114;   ## Angstrom   ???
+
+###############################################################################
 ##                               The Program                                 ##
 ###############################################################################
 
@@ -42,7 +54,8 @@ if ($ctrl eq "help"){
 ##test_1();
 
 ##mg_struct_set_1();
-mg_struct_set_2_distortion();
+##mg_struct_set_2_distortion();
+mg_struct_hcp_4x4x4_vacancy();
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -52,6 +65,34 @@ mg_struct_set_2_distortion();
 #  ##   <<<   Input parameters   >>>   ##
 #  ##   <<<   ----------------   >>>   ##
 #}
+
+sub mg_struct_hcp_4x4x4_vacancy {
+
+  my $hcpA = $::MG_HCP_A;   ## Angstrom
+  my $hcpC = $::MG_HCP_C;   ## Angstrom
+  my $hcpG = $::MG_HCP_G;           ## Degree
+
+  my $maxAmp = 0.1;
+  my $nSamples = 50;
+  my $i;
+  my $curAmp;
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+  my @kpts = (1, 1, 1);
+
+  print "Mg 4x4x4 hcp pure and with 1 vacancy. \n";
+  my $vs = vaspSTRUCT->new();
+
+  print "\n rand \n";
+  my $pParams = [$hcpA,$hcpC,$hcpG,4,4,4,"Mg"];
+  for ($i=1; $i<=$nSamples; $i++){
+    $curAmp = $maxAmp*$i/$nSamples;
+    print "$curAmp   ->   ";
+    new_struct_task_distortion("hcp", ["rand",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
+    new_struct_task_distortion("hcp", ["vacancy",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
+  }
+}
 
 sub mg_struct_set_1 {
 
@@ -260,7 +301,7 @@ sub new_struct_task {
 sub new_struct_task_distortion {
   ##   <<<   Input parameters   >>>   ##
   my $strType    = $_[0];      ## hcp, fcc, bcc, diamond, sc
-  my @distParams = @{$_[1]};   ## [<C11, C44, CP, V0, rand>, [<x,y,z>], n, distAmp]
+  my @distParams = @{$_[1]};   ## [<C11, C44, CP, V0, rand, vacancy>, [<x,y,z>], n, distAmp]
   my $nProcs     = $_[2];
   my $vs         = $_[3];
   my @strParams  = @{$_[4]};   ## parameters for structure proc ( ... , nC1, nC2, nC3, AtomType)
@@ -289,27 +330,54 @@ sub new_struct_task_distortion {
     $curAmp = $distParams[2];
   }
   ##if ($distT eq "rand"){$distFun = "distort_pos";}
+
+  if ($distT eq "vacancy"){
+    if ($vs->isDefined() ne "OK"){
+      print "ERROR!!! Structure is not defined for vacancy !!! \n";
+      return;
+    }
+    my $newNA = $vs->nAtoms()-1;
+    my @pOldR = @{$vs->ainfC()};
+    my @pOldX = @{$vs->ainfD()};
+    my @newX = map {[0,0,0]} 1..$newNA;
+    my @newR = map {[0,0,0]} 1..$newNA;
+    my $i;
+    $newX[0] = [$pOldX[0][0],$pOldX[0][1],$pOldX[0][2]];
+    $newR[0] = [$pOldR[0][0],$pOldR[0][1],$pOldR[0][2]];
+    for ($i= 1; $i<$newNA; $i++){
+      $newX[$i] = [$pOldX[$i+1][0],$pOldX[$i+1][1],$pOldX[$i+1][2]];
+      $newR[$i] = [$pOldR[$i+1][0],$pOldR[$i+1][1],$pOldR[$i+1][2]];
+    }
+    $vs->ainfC(\@newR);
+    $vs->ainfD(\@newX);
+    $vs->nAtoms($newNA);
+    my @atn = @{$vs->atomTypeNums()};
+    $atn[0]--;
+    $vs->atomTypeNums(\@atn);
+  }
+  else {
+    my $structFun = "new_struct_$strType";
+    $vs->$structFun(@strParams);
+    #my @bvs = @{$vs->baseVs};
+    #my $cx;
+    #print "Vectors before distortion\n";
+    #foreach $cx (@{$bvs[0]}){printf("  %9.5f  ",$cx) } print "\n";
+    #foreach $cx (@{$bvs[1]}){printf("  %9.5f  ",$cx) } print "\n";
+    #foreach $cx (@{$bvs[2]}){printf("  %9.5f  ",$cx) } print "\n";
+    if ($distT eq "rand"){
+      $distFun = "distort_pos";
+      $vs->$distFun($curAmp);
+    } else {
+      $vs->$distFun($distT,$curAmp,$ax);
+    }
+  }
+
   my $tInfo = sprintf("mg_%s_%s",$strType,$strAux);
   print "   Struct task $tInfo  Dist Amp = $curAmp\n";
   my $tPath = new_task($tInfo,$nProcs,1);
   my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
   my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
-  my $structFun = "new_struct_$strType";
-  $vs->$structFun(@strParams);
 
-  #my @bvs = @{$vs->baseVs};
-  #my $cx;
-  #print "Vectors before distortion\n";
-  #foreach $cx (@{$bvs[0]}){printf("  %9.5f  ",$cx) } print "\n";
-  #foreach $cx (@{$bvs[1]}){printf("  %9.5f  ",$cx) } print "\n";
-  #foreach $cx (@{$bvs[2]}){printf("  %9.5f  ",$cx) } print "\n";
-
-  if ($distT eq "rand"){
-    $distFun = "distort_pos";
-    $vs->$distFun($curAmp);
-  } else {
-    $vs->$distFun($distT,$curAmp,$ax);
-  }
   ##my @kpts = calc_kpts($vs->baseVs);
   $vs->write_poscar($fnPscr);
   create_KPOINTS($fnKpts,@kpts);
@@ -366,7 +434,7 @@ sub write_pool_str{
   print $fh $pStr;
 }
 
-sub new_task_dummy_files{
+sub new_task_dummy_files {
   ##   <<<   Input parameters   >>>   ##
   my $taskPath = $_[0];      ## folder of the tsk inside data folder
   ##   <<<   ----------------   >>>   ##
@@ -374,17 +442,18 @@ sub new_task_dummy_files{
   $::gDbgStr = "Copying task_dummy to $destDir \n";
   #print $::gDbgStr;
   write_log_line($::gDbgStr, "No Arrow");
-  my @filesToCp = glob "$::gBasePath/$::$gFldDummy/*";
+  my @filesToCp = glob "$::gBasePath/$::gFldDummy/*";
   my @args;
   @args = ("touch", "$destDir/WAIT");
   system(@args) == 0 or die "system @args failed: $?";
   foreach my $file (@filesToCp){
     @args = ("cp", "-R", "$file", "$destDir");
     system(@args) == 0 or die "system @args failed: $?";
+    ##print "  $file \n"
   }
 }
 
-sub new_task{
+sub new_task {
   ##   <<<   Input parameters   >>>   ##
   my $tName = $_[0];       ## task name
   my $nc = $_[1];          ## number of cores required
