@@ -138,7 +138,7 @@ if ($pInUse >= $maxProc){
     print $::gDbgStr;
     write_log_line($::gDbgStr, "No Arrow");
   }
-  if (@arrDone == 0) {print "Loop file will not be affected. \n"; exit;}
+  if (@arrDone == 0) {print "Pool file will not be affected. \n"; exit;}
 }
 my $npDemand;
 my $ftmp;
@@ -171,7 +171,7 @@ while($cl = <FPOOL>){
     if ($foundDone == 0){print $ftmp $clCp;}
     next;
   }
-  if ($tState eq "done"){print $ftmp $clCp; next;}
+  if (($tState eq "done") or ($tState eq "fail") or ($tState eq "skip")) {print $ftmp $clCp; next;}
   $npDemand = $arrLine[2];
   if ($pInUse + $npDemand > $maxProc){print $ftmp $clCp; next;}
   $tPath = $arrLine[3];

@@ -29,10 +29,10 @@ use vaspSTRUCT;
 our $MG_HCP_A      = 3.125321549;   ## Angstrom
 our $MG_HCP_C      = 5.074289751;   ## Angstrom
 our $MG_HCP_G      = 120;           ## Degree
-our $MG_FCC_A      = 4.421808165;   ## Angstrom   ???
-our $MG_BCC_A      = 3.498568081;   ## Angstrom   ???
-our $MG_SC_A       = 2.952998977;   ## Angstrom   ???
-our $MG_DIAMOND_A  = 6.677466114;   ## Angstrom   ???
+our $MG_FCC_A      = 4.421808165;   ## Angstrom   
+our $MG_BCC_A      = 3.498568081;   ## Angstrom   
+our $MG_SC_A       = 2.952998977;   ## Angstrom   
+our $MG_DIAMOND_A  = 6.677466114;   ## Angstrom   
 
 ###############################################################################
 ##                               The Program                                 ##
@@ -89,7 +89,9 @@ sub mg_struct_hcp_4x4x4_vacancy {
   for ($i=1; $i<=$nSamples; $i++){
     $curAmp = $maxAmp*$i/$nSamples;
     print "$curAmp   ->   ";
+    $::gFldDummy = "task_dummy";
     new_struct_task_distortion("hcp", ["rand",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
+    $::gFldDummy = "task_dummy_vacancy";
     new_struct_task_distortion("hcp", ["vacancy",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
   }
 }
@@ -429,7 +431,7 @@ sub test_1{
 
 sub write_pool_str{
   my $fh = $_[0];
-  my $pStr = sprintf("  %05d     %30s  %2d  %20s  %8s  %8d  %8d\n",
+  my $pStr = sprintf("  %05d     %25s  %2d  %20s  %8s  %8d  %8d\n",
     $_[1],$_[2],$_[3],$_[4],$_[5],$_[6],$_[7]);
   print $fh $pStr;
 }
