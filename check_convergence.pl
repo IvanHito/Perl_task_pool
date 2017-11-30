@@ -7,8 +7,8 @@ use Math::Trig;
 ##                            Glogal Parameters                              ##
 ###############################################################################
 
-our $gBasePath = "/home/ivan/git/Perl_task_pool";            ## should be same as in manage_pool.pl
-##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";        ## MakBook
+##our $gBasePath = "/home/ivan/git/Perl_task_pool";            ## should be same as in manage_pool.pl
+our $gBasePath = "/Users/ivanl/git/Perl_task_pool";        ## MakBook
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool_copy";                                  ## should be same as in manage_pool.pl
 our $gFnRun = "p_run";                                       ## should be same as in manage_pool.pl
@@ -26,15 +26,25 @@ our $gFldAllData = "all_data_files";
 
 print "\n";
 my %hFilesFound = check_files();
-print "Found : ", %hFilesFound, "\n";
+print "Found : ";
+prt_hash(\%hFilesFound);
+print "\n";
 
 print "\n";
 
-my @arrTn = (1853..1932);
-my @arrBad1MD = check_firstStep_convergence(\@arrTn);
-print "Convergence check finished. Inappropriate convergence: \n";
-foreach my $tnBad (@arrBad1MD) {print "  $tnBad "}
+##my @arrTn = (1853..1932);
+#my @arrTn = (1..2);
+#my @arrBad1MD = check_firstStep_convergence(\@arrTn);
+#print "Convergence check finished. Inappropriate convergence: \n";
+#foreach my $tnBad (@arrBad1MD) {print "  $tnBad "}
+#print "\n";
+
+print "Change status check: \n";
+my %hTSt = (1=>"skip", 20=>"fail");
+prt_hash(\%hTSt);
 print "\n";
+change_tasks_status(\%hTSt);
+print "Finished \n";
 
 print "\n";
 
@@ -47,24 +57,118 @@ print "\n";
 #  ##   <<<   ----------------   >>>   ##
 #}
 
+sub prt_hash{
+  ##   <<<   Input parameters   >>>   ##
+	my %ch = %{$_[0]};
+  ##   <<<   ----------------   >>>   ##
+	keys %ch; # reset the internal iterator so a prior each() doesn't affect the loop
+	print "[";
+	while(my($k, $v) = each %ch) {
+		print " $k => $v ";
+	}
+	keys %ch;
+	print "]";
+}
+
+## %hTNewSt = ( taskN => newState )
 sub change_tasks_status {
   ##   <<<   Input parameters   >>>   ##
-	my %arrTNewSt = %{$_[0]};
+	my %hTNewSt = %{$_[0]};
   ##   <<<   ----------------   >>>   ##
 	my $cl; my $clCp;
 	my @arrLine; my @arrOutL;
 	my $tState;
+	my $tN;
+	my $tPath;
+	my $nParams;
+	my %hFSt;
+	my $fn;
+	my @args;
+	my $ftmp;
+	my $poolChanged;
+	my %hSTATUSfns = ("DONE"=>0, "WAIT"=>0, "SKIP"=>0, "RUN"=>0, "FAIL"=>0);
 	open(FPOOL, "<$::gBasePath/$::gFnPool") or die "Could not open /$::gFnPool : $! \n\n";
-	open(FTMPP, "<$::gBasePath/$::gFnTmpPool") or die "Could not open /$::gFnTmpPool : $! \n\n";
+	open($ftmp, ">$::gBasePath/$::gFnTmpPool") or die "Could not open /$::gFnTmpPool : $! \n\n";
 	while($cl = <FPOOL>){
+		if ($cl =~ /#/) {print $ftmp $cl; next;}
+		$clCp = $cl;
+	  chomp $cl; $cl =~ s/^\s+//;    ## get rid of space in the beginning and new line in the end
+	  @arrLine = split /\s+/, $cl;
+	  $nParams = @arrLine;
+	  if ($nParams != 7){
+			print "WARNING!!! Wrong pool string length: $nParams \n";
+			print $ftmp $clCp;
+			next;
+		}
+		$tState = $arrLine[4];
+		$tN = $arrLine[0];
+		keys %hTNewSt; # reset the internal iterator so a prior each() doesn't affect the loop
+		$poolChanged = 0;
+		while(my($taskNum, $taskNewState) = each %hTNewSt) {
+			if ($taskNum == $tN) {
+				if ($tState eq $taskNewState){ print "WARNING!!! New state of task $tN is same as old : $tState \n"; }
+				elsif ($tState eq "run"){ print "WARNING!!! Task $tN is on the run! We will not touch it. \n"; }
+				else{
+					$tPath = $arrLine[3];
+					%hFSt = check_arbir_files($tPath, \%hSTATUSfns);
+					## Delete found STATE files
+					foreach $fn (keys %hFSt) {
+						if ($hFSt{$fn} == 1){
+							$hFSt{$fn} = 0;
+							@args = ("rm", "$tPath/$fn");
+							system(@args) == 0 or die "system @args failed: $?\n\n";
+							print "From $tPath removed : $fn\n";
+						}
+					}
+					if ($taskNewState eq "skip"){
+						@args = ("touch", "$tPath/SKIP");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "In $tPath Created : SKIP\n";
+						$arrLine[4] = "skip";
+						write_pool_str($ftmp, @arrLine);
+						$poolChanged = 1;
+						print "\n";
+					}
+					elsif ($taskNewState eq "done"){
+						@args = ("touch", "$tPath/DONE");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "In $tPath Created : DONE\n";
+						$arrLine[4] = "done";
+						write_pool_str($ftmp, @arrLine);
+						$poolChanged = 1;
+						print "\n";
+					}
+					elsif ($taskNewState eq "fail"){
+						@args = ("touch", "$tPath/FAIL");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "In $tPath Created : FAIL\n";
+						$arrLine[4] = "fail";
+						write_pool_str($ftmp, @arrLine);
+						$poolChanged = 1;
+						print "\n";
+					}
+					else {
+						print "WARNING!!! Unknown new task status : $taskNewState\n";
+					}
+				}
+				print "\n";
+				last;
+			}
+		}
+		if ($poolChanged == 0) {print $ftmp $clCp;}
 	}
 	close(FPOOL);
-	close(FTMPP);
+	close($ftmp);
 
+	print "Copy $::gFnTmpPool > $::gFnPool\n";
+	## copy from pool tmp to pool
+	open(FPOOL, ">$::gBasePath/$::gFnPool") or die "Could not open $::gFnPool: $!\n\n";
+	open($ftmp, "<$::gBasePath/$::gFnTmpPool") or die "Could not open $::gFnTmpPool: $!\n\n";
+	while($cl = <$ftmp>){print FPOOL $cl;}
+	close $ftmp;
+	close FPOOL;
 
-keys %hash; # reset the internal iterator so a prior each() doesn't affect the loop
-while(my($k, $v) = each %hash) { ... }
-}
+} ## end change_tasks_status
 
 sub check_firstStep_convergence {
   ##   <<<   Input parameters   >>>   ##
@@ -92,7 +196,7 @@ sub check_firstStep_convergence {
 		foreach my $tn (@arrNTs){ if ($tn == $arrLine[0]) {
 		  $tState = $arrLine[4];
 			if (($tState eq "run") or ($tState eq "waiting") or ($tState eq "skip")) {
-				print "Watch the state of task $tn! It is <$tState> \n"; 
+				print "Watch the state of task $tn! It is <$tState> \n";
 			}
 			$nChecked++;
 			$tPath = $arrLine[3];
@@ -150,12 +254,34 @@ sub check_files {
 	if ($foundPool == 0){die "No POOL FILE! $::gFnPool is not in $::gBasePath \n\n";}
 	if ($foundData == 0){die "No DATA FOLDER! $::gFldData is not in $::gBasePath \n\n";}
 	my %hFilesFound = (
-			"pool" => $foundPool, 
+			"pool" => $foundPool,
 			"data" => $foundData,
 			"run"  => $foundRun,
 			"done" => $foundDone,
 	);
 	return %hFilesFound;
+}
+
+sub check_arbir_files {
+	##   <<<   Input parameters   >>>   ##
+	my $dirPath      = $_[0];       ## dir path
+	my %hFilesStatus = %{$_[1]};    ##
+  ##   <<<   ----------------   >>>   ##
+	my $cfile;
+	my $dir;
+	opendir $dir, $dirPath or die "Cannot open directory $dirPath: $! \n\n";
+	my @files = readdir $dir;
+	closedir $dir;
+	my($fn, $fs);
+	foreach $fn (keys %hFilesStatus) { $hFilesStatus{$fn} = 0;}
+	foreach $cfile (@files){
+  	##print "$cfile \n";
+		##keys %hFilesStatus; # reset the internal iterator so a prior each() doesn't affect the loop
+		foreach $fn (keys %hFilesStatus) {
+			if ($fn eq $cfile){ $hFilesStatus{$fn} = 1; last; }
+		}
+	}
+	return %hFilesStatus
 }
 
 sub write_pool_str{
@@ -184,4 +310,3 @@ sub write_pool_str{
 
 
 ##
-
