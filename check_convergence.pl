@@ -7,10 +7,10 @@ use Math::Trig;
 ##                            Glogal Parameters                              ##
 ###############################################################################
 
-##our $gBasePath = "/home/ivan/git/Perl_task_pool";            ## should be same as in manage_pool.pl
-our $gBasePath = "/Users/ivanl/git/Perl_task_pool";        ## MakBook
+our $gBasePath = "/home/ivan/git/Perl_task_pool";            ## should be same as in manage_pool.pl
+##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";        ## MakBook
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
-our $gFnPool = "pool_copy";                                  ## should be same as in manage_pool.pl
+our $gFnPool = "pool";                                  ## should be same as in manage_pool.pl
 our $gFnRun = "p_run";                                       ## should be same as in manage_pool.pl
 our $gFnDone = "p_done";                                     ## should be same as in manage_pool.pl
 our $gFnTmpPool = ".tmp_pool2";                              ## should be different!
@@ -20,9 +20,13 @@ our $gFnTmpDone = ".tmp_done2";                              ## should be differ
 our $gFldDummy = "task_dummy";
 our $gFldAllData = "all_data_files";
 
+##our $TST_WAIT = "waiting";
+
 ###############################################################################
 ##                               The Program                                 ##
 ###############################################################################
+
+my %hTSt;
 
 print "\n";
 my %hFilesFound = check_files();
@@ -32,18 +36,28 @@ print "\n";
 
 print "\n";
 
-##my @arrTn = (1853..1932);
-#my @arrTn = (1..2);
-#my @arrBad1MD = check_firstStep_convergence(\@arrTn);
-#print "Convergence check finished. Inappropriate convergence: \n";
-#foreach my $tnBad (@arrBad1MD) {print "  $tnBad "}
-#print "\n";
+if (-1>0) {
+	my @arrTn = (1853..1952);
+	##my @arrTn = (1853..1857);
+	my @arrBad1MD = check_firstStep_convergence(\@arrTn);
+	print "Convergence check finished. Inappropriate convergence: \n";
+	foreach my $tnBad (@arrBad1MD) {
+		print "  $tnBad ";
+		$hTSt{$tnBad} = "fail";
+	}
+	print "\n";
+}
 
-print "Change status check: \n";
-my %hTSt = (1=>"skip", 20=>"fail");
-prt_hash(\%hTSt);
-print "\n";
-change_tasks_status(\%hTSt);
+if (1>0){
+	#%hTSt = (1853=>"wait", 1856=>"wait", 1860=>"wait", 1866=>"wait", 1878=>"wait", 
+	#1881=>"wait", 1883=>"wait", 1886=>"wait", 1906=>"wait", 1911=>"wait", 1916=>"wait", 
+	#1917=>"wait", 1918=>"wait", 1921=>"wait", 1922=>"wait", 1923=>"wait", 1929=>"wait" );
+	print "Change status: \n";
+	%hTSt = (1933=>"done", 1934=>"done", 1935=>"done", 1939=>"done", 1941=>"done");
+	prt_hash(\%hTSt);
+	print "\n";
+	change_tasks_status(\%hTSt);
+}
 print "Finished \n";
 
 print "\n";
@@ -120,7 +134,16 @@ sub change_tasks_status {
 							print "From $tPath removed : $fn\n";
 						}
 					}
-					if ($taskNewState eq "skip"){
+					if ($taskNewState eq "wait"){
+						@args = ("touch", "$tPath/WAIT");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "In $tPath Created : WAIT\n";
+						$arrLine[4] = "waiting";
+						write_pool_str($ftmp, @arrLine);
+						$poolChanged = 1;
+						print "\n";
+					}
+					elsif ($taskNewState eq "skip"){
 						@args = ("touch", "$tPath/SKIP");
 						system(@args) == 0 or die "system @args failed: $?\n\n";
 						print "In $tPath Created : SKIP\n";
@@ -139,10 +162,16 @@ sub change_tasks_status {
 						print "\n";
 					}
 					elsif ($taskNewState eq "fail"){
+						@args = ("rm", "-r", "$tPath/result");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "From $tPath removed : result/\n";
+						@args = ("rm", "$tPath/VASP/CHGCAR", "$tPath/VASP/CHG", "$tPath/VASP/WAVECAR");
+						system(@args) == 0 or die "system @args failed: $?\n\n";
+						print "From $tPath removed : VASP/CHGCAR, VASP/CHG, VASP/WAVECAR\n";
 						@args = ("touch", "$tPath/FAIL");
 						system(@args) == 0 or die "system @args failed: $?\n\n";
 						print "In $tPath Created : FAIL\n";
-						$arrLine[4] = "fail";
+						$arrLine[4] = "!!!fail!!!";
 						write_pool_str($ftmp, @arrLine);
 						$poolChanged = 1;
 						print "\n";
@@ -212,12 +241,15 @@ sub check_firstStep_convergence {
 			open(FOUT, "<$::gBasePath/$tPath/VASP/out_1");
 			print "In out_1 of task $tn: \n";
 			$dE = 999.666;
-			while ($cl = <FOUT>){if ($cl =~ /DAV:/){
-				chomp $cl; $cl =~ s/^\s+//;
-				@arrOutL = split /\s+/, $cl;
-				##print "  $arrOutL[0] $arrOutL[1]  $arrOutL[3]\n";
-				$dE = $arrOutL[3];
-			}}
+			while ($cl = <FOUT>){
+				if ($cl =~ /Error/){ next; }
+				if ($cl =~ /DAV:/){
+					chomp $cl; $cl =~ s/^\s+//;
+					@arrOutL = split /\s+/, $cl;
+					##print "  $arrOutL[0] $arrOutL[1]  $arrOutL[3]\n";
+					$dE = $arrOutL[3];
+				}
+			}
 			close(FOUT);
 			print "Final dE = $dE";
 			if (abs($dE) > 1.0E-6){

@@ -171,7 +171,8 @@ while($cl = <FPOOL>){
     if ($foundDone == 0){print $ftmp $clCp;}
     next;
   }
-  if (($tState eq "done") or ($tState eq "fail") or ($tState eq "skip")) {print $ftmp $clCp; next;}
+  if (($tState eq "done") or ($tState eq "!!!fail!!!") or ($tState eq "skip")) 
+		{print $ftmp $clCp; next;}
   $npDemand = $arrLine[2];
   if ($pInUse + $npDemand > $maxProc){print $ftmp $clCp; next;}
   $tPath = $arrLine[3];
