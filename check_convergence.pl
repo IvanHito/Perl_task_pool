@@ -36,8 +36,8 @@ print "\n";
 
 print "\n";
 
-if (-1>0) {
-	my @arrTn = (1853..1952);
+if (1>0) {
+	my @arrTn = (1953..2056);
 	##my @arrTn = (1853..1857);
 	my @arrBad1MD = check_firstStep_convergence(\@arrTn);
 	print "Convergence check finished. Inappropriate convergence: \n";
@@ -48,12 +48,12 @@ if (-1>0) {
 	print "\n";
 }
 
-if (1>0){
+if (-1>0){
 	#%hTSt = (1853=>"wait", 1856=>"wait", 1860=>"wait", 1866=>"wait", 1878=>"wait", 
 	#1881=>"wait", 1883=>"wait", 1886=>"wait", 1906=>"wait", 1911=>"wait", 1916=>"wait", 
 	#1917=>"wait", 1918=>"wait", 1921=>"wait", 1922=>"wait", 1923=>"wait", 1929=>"wait" );
 	print "Change status: \n";
-	%hTSt = (1933=>"done", 1934=>"done", 1935=>"done", 1939=>"done", 1941=>"done");
+	#%hTSt = (1933=>"done", 1934=>"done", 1935=>"done", 1939=>"done", 1941=>"done");
 	prt_hash(\%hTSt);
 	print "\n";
 	change_tasks_status(\%hTSt);

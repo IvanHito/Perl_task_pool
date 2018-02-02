@@ -72,27 +72,27 @@ sub mg_struct_hcp_4x4x4_vacancy {
   my $hcpC = $::MG_HCP_C;   ## Angstrom
   my $hcpG = $::MG_HCP_G;           ## Degree
 
-  my $maxAmp = 0.1;
-  my $nSamples = 50;
+  my $maxAmp = 0.05;
+  my $nSamples = 25;
   my $i;
   my $curAmp;
 
   my $strDescr = "na";
   my $nProcs = 56;
-  my @kpts = (1, 1, 1);
+  my @kpts = (2, 2, 2);
 
-  print "Mg 4x4x4 hcp pure and with 1 vacancy. \n";
+  print "Mg 3x3x3 hcp pure and with 1 vacancy. \n";
   my $vs = vaspSTRUCT->new();
 
   print "\n rand \n";
-  my $pParams = [$hcpA,$hcpC,$hcpG,4,4,4,"Mg"];
+  my $pParams = [$hcpA,$hcpC,$hcpG,3,3,3,"Mg"];
   for ($i=1; $i<=$nSamples; $i++){
     $curAmp = $maxAmp*$i/$nSamples;
     print "$curAmp   ->   ";
     $::gFldDummy = "task_dummy";
-    new_struct_task_distortion("hcp", ["rand",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
+    new_struct_task_distortion("hcp", ["rand",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts,"nc3_kpt2");
     $::gFldDummy = "task_dummy_vacancy";
-    new_struct_task_distortion("hcp", ["vacancy",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts);
+    new_struct_task_distortion("hcp", ["vacancy",$i,$curAmp], $nProcs, $vs, $pParams,\@kpts,"nc3_kpt2");
   }
 }
 
@@ -308,6 +308,7 @@ sub new_struct_task_distortion {
   my $vs         = $_[3];
   my @strParams  = @{$_[4]};   ## parameters for structure proc ( ... , nC1, nC2, nC3, AtomType)
   my @kpts       = @{$_[5]};
+	my $tpAuxStr   = $_[6];
   ##   <<<   ----------------   >>>   ##
   my $nps = @strParams;
   my $tp = $strParams[$nps-1];
@@ -324,11 +325,11 @@ sub new_struct_task_distortion {
   if ($distT eq "C11"){
     $ax = $hax{$distParams[1]};
     $n = $distParams[2];
-    $strAux = sprintf("%s%s_%d",$distT,$distParams[1],$n);
+    $strAux = sprintf("%s%s_%d_%s",$distT,$distParams[1],$n,$tpAuxStr);
     $curAmp = $distParams[3];
   } else {
     $n = $distParams[1];
-    $strAux = sprintf("%s_%d",$distT,$n);
+    $strAux = sprintf("%s_%d_%s",$distT,$n,$tpAuxStr);
     $curAmp = $distParams[2];
   }
   ##if ($distT eq "rand"){$distFun = "distort_pos";}
