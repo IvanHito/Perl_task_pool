@@ -11,8 +11,8 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
-##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+##our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
+our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
@@ -29,10 +29,10 @@ use vaspSTRUCT;
 our $MG_HCP_A      = 3.125321549;   ## Angstrom
 our $MG_HCP_C      = 5.074289751;   ## Angstrom
 our $MG_HCP_G      = 120;           ## Degree
-our $MG_FCC_A      = 4.421808165;   ## Angstrom   
-our $MG_BCC_A      = 3.498568081;   ## Angstrom   
-our $MG_SC_A       = 2.952998977;   ## Angstrom   
-our $MG_DIAMOND_A  = 6.677466114;   ## Angstrom   
+our $MG_FCC_A      = 4.421808165;   ## Angstrom
+our $MG_BCC_A      = 3.498568081;   ## Angstrom
+our $MG_SC_A       = 2.952998977;   ## Angstrom
+our $MG_DIAMOND_A  = 6.677466114;   ## Angstrom
 
 ###############################################################################
 ##                               The Program                                 ##
@@ -55,7 +55,8 @@ if ($ctrl eq "help"){
 
 ##mg_struct_set_1();
 ##mg_struct_set_2_distortion();
-mg_struct_hcp_4x4x4_vacancy();
+##mg_struct_hcp_vacancy();
+mg_struct_hcp_dist_rand_vacancy();
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -65,6 +66,98 @@ mg_struct_hcp_4x4x4_vacancy();
 #  ##   <<<   Input parameters   >>>   ##
 #  ##   <<<   ----------------   >>>   ##
 #}
+
+sub mg_struct_hcp_dist_rand_vacancy {
+
+  my $hcpA = 3.125321549;   ## Angstrom
+  my $hcpC = 5.074289751;   ## Angstrom
+  my $hcpG = 120;           ## Degree
+  my $fccA = 4.421808165;   ## Angstrom   ???
+  my $bccA = 3.498568081;   ## Angstrom   ???
+  my $scA  = 2.952998977;   ## Angstrom   ???
+  my $dcA  = 6.677466114;   ## Angstrom   ???
+
+  my $maxAmp = 0.1;
+  my $nSamples = 50;
+  my @distAmps = (-0.03, -0.02, 0.02, 0.03);
+  my @randAmps = (0.02, 0.03);
+  my $nRands = 10;
+  my $i; my $j; my $ii; my $cStruct = "hcp"; my $cAxes; my $cDist;
+  my $cA;
+  my $curAmp;
+  my $curRandAmp;
+  my $structFun;
+  my $baseSInf = "";
+  my $uaxInf = "";
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+
+  my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
+  ##my @allStructs = ("hcp", "sc", "diamond");
+  my @allDistortions = ("C44", "CP", "V0");
+  ##my @allDistortions = ("C44");
+  my $structParams = [$hcpA,$hcpC,$hcpG,3,3,3,"Mg"];
+  my @allAxes = ("x","y","z");
+  ##my @allAxes = ("x");
+
+  print "Mg all structures with 10% cell param distortion. \n";
+  my $vs = vaspSTRUCT->new();
+
+  my @kpts = (2, 2, 2);
+
+  print "\n$cStruct \n\n"; ## ==========================================================
+  foreach $cAxes (@allAxes) {
+    print "\n C11 $cAxes \n";
+    $i = 0;
+    foreach $curAmp (@distAmps) {
+      print "$curAmp   ->   \n";
+      $ii = 0;
+      foreach $curRandAmp (@randAmps){
+        $baseSInf = sprintf("C11%s%d",$cAxes,$i+1);
+        for ($j=0; $j<$nRands; $j++){
+          $uaxInf = sprintf("%02d",$j+1);
+          $vs->new_struct_hcp(@{$structParams});
+          $vs->distort_bvs("C11",$curAmp,$cAxes);
+          $::gFldDummy = "task_dummy";
+          new_struct_task_distortion($cStruct, ["randexisting",$ii+1,$curRandAmp,$baseSInf], $nProcs, $vs, $structParams,\@kpts,$uaxInf);
+          $::gFldDummy = "task_dummy_vacancy";
+          $uaxInf = sprintf("%s_%s",$baseSInf,$uaxInf);
+          new_struct_task_distortion($cStruct, ["vacancy",$ii+1,$curRandAmp], $nProcs, $vs, $structParams,\@kpts,$uaxInf);
+        }
+        $ii++;
+      }
+      $i++;
+    }
+    #print "\n";
+  }
+  foreach $cDist (@allDistortions) {
+    print "\n $cDist \n";
+    $i = 0;
+    foreach $curAmp (@distAmps) {
+      print "$curAmp   ->   \n";
+      $ii = 0;
+      foreach $curRandAmp (@randAmps){
+        $baseSInf = sprintf("%s_%d",$cDist,$i+1);
+        for ($j=0; $j<$nRands; $j++){
+          $uaxInf = sprintf("%02d",$j+1);
+          $vs->new_struct_hcp(@{$structParams});
+          $vs->distort_bvs($cDist,$curAmp);
+          $::gFldDummy = "task_dummy";
+          new_struct_task_distortion($cStruct, ["randexisting",$ii+1,$curRandAmp,$baseSInf], $nProcs, $vs, $structParams,\@kpts,$uaxInf);
+          $::gFldDummy = "task_dummy_vacancy";
+          $uaxInf = sprintf("%s_%s",$baseSInf,$uaxInf);
+          new_struct_task_distortion($cStruct, ["vacancy",$ii+1,$curAmp], $nProcs, $vs, $structParams,\@kpts,$uaxInf);
+        }
+        $ii++;
+      }
+      $i++;
+    }
+    #print "\n";
+  }
+
+  print "\n";
+}
 
 sub mg_struct_hcp_4x4x4_vacancy {
 
@@ -310,11 +403,11 @@ sub new_struct_task_distortion {
   my @kpts       = @{$_[5]};
 	my $tpAuxStr   = $_[6];
   ##   <<<   ----------------   >>>   ##
-  my $nps = @strParams;
-  my $tp = $strParams[$nps-1];
-  my $nC3 = $strParams[$nps-2];
-  my $nC2 = $strParams[$nps-3];
-  my $nC1 = $strParams[$nps-4];
+  # my $nps = @strParams;
+  # my $tp = $strParams[$nps-1];
+  # my $nC3 = $strParams[$nps-2];
+  # my $nC2 = $strParams[$nps-3];
+  # my $nC1 = $strParams[$nps-4];
   my $distT = $distParams[0];
   my $ax = 0;
   my $n = 0;
@@ -327,7 +420,12 @@ sub new_struct_task_distortion {
     $n = $distParams[2];
     $strAux = sprintf("%s%s_%d_%s",$distT,$distParams[1],$n,$tpAuxStr);
     $curAmp = $distParams[3];
-  } else {
+  } elsif ($distT eq "randexisting"){
+    $n = $distParams[1];
+    $strAux = sprintf("%s_re_%d_%s",$distParams[3],$n,$tpAuxStr);
+    $curAmp = $distParams[2];
+  }
+  else {
     $n = $distParams[1];
     $strAux = sprintf("%s_%d_%s",$distT,$n,$tpAuxStr);
     $curAmp = $distParams[2];
@@ -357,6 +455,14 @@ sub new_struct_task_distortion {
     my @atn = @{$vs->atomTypeNums()};
     $atn[0]--;
     $vs->atomTypeNums(\@atn);
+  }
+  elsif ($distT eq "randexisting"){
+    if ($vs->isDefined() ne "OK"){
+      print "ERROR!!! Structure is not defined for randomexisting !!! \n";
+      return;
+    }
+    $distFun = "distort_pos";
+    $vs->$distFun($curAmp);
   }
   else {
     my $structFun = "new_struct_$strType";
