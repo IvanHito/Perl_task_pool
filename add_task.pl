@@ -56,7 +56,8 @@ if ($ctrl eq "help"){
 ##mg_struct_set_1();
 ##mg_struct_set_2_distortion();
 ##mg_struct_hcp_vacancy();
-mg_struct_hcp_dist_rand_vacancy();
+##mg_struct_hcp_dist_rand_vacancy();
+mg_struct_TEST_dist_rand();
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -66,6 +67,113 @@ mg_struct_hcp_dist_rand_vacancy();
 #  ##   <<<   Input parameters   >>>   ##
 #  ##   <<<   ----------------   >>>   ##
 #}
+
+sub mg_struct_TEST_dist_rand {
+
+  my $hcpA = 3.125321549;   ## Angstrom
+  my $hcpC = 5.074289751;   ## Angstrom
+  my $hcpG = 120;           ## Degree
+  my $fccA = 4.421808165;   ## Angstrom   ???
+  my $bccA = 3.498568081;   ## Angstrom   ???
+  my $scA  = 2.952998977;   ## Angstrom   ???
+  my $dcA  = 6.677466114;   ## Angstrom   ???
+
+  my $maxAmp = 0.1;
+  my $nSamples = 50;
+  my @distAmps    = (-0.01, 0.00, 0.01);
+  my @strDistAmps = ("m001","000","p001");
+  my @randAmps    = (0.01);
+  my @strRandAmps = ("001");
+  my $nRands = 2;
+  my $i; my $j; my $ii; my $cStruct = "hcp"; my $cAxes; my $cDist;
+  my $cA;
+  my $curAmp;
+  my $curRandAmp;
+  my $structFun;
+  my $baseSInf = "";
+  my $auxInf = "";
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+
+  my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
+  #my @allStructs = ("hcp");
+  my @allDistortions = ("C44", "CP", "V0");
+  my %hParams = (
+      "hcp"      => [$hcpA,$hcpC,$hcpG,1,1,1,"Mg"],
+      "fcc"      => [$fccA,$fccA,$fccA,1,1,1,"Mg"],
+      "bcc"      => [$bccA,$bccA,$bccA,1,1,1,"Mg"],
+      "sc"       => [$scA,$scA,$scA,2,2,2,"Mg"],
+      "diamond"  => [$dcA,$dcA,$dcA,1,1,1,"Mg"]
+    );
+  my $pParams;
+  my @allAxes = ("x","y","z");
+  ##my @allAxes = ("x");
+
+  print "Mg all structures with 0% or 1% cell param distortion. \n";
+  my $vs = vaspSTRUCT->new();
+
+  my @kpts = (30, 30, 30);
+  my $vaspStrFuncBase = "new_struct_";
+  my $vsf = "";
+
+  foreach $cStruct (@allStructs) {
+    $vsf = $vaspStrFuncBase.$cStruct;
+    print "\n$cStruct \n\n";
+    @kpts = (30,30,30);
+    if ($cStruct eq "diamond"){@kpts = (20,20,20)}
+    foreach $cAxes (@allAxes) {
+      print "\n C11 $cAxes \n"; ## ========================================================== C11
+      $i = 0;
+      foreach $curAmp (@distAmps) {
+        print "$curAmp   ->   \n";
+        $ii = 0;
+        foreach $curRandAmp (@randAmps){
+          $baseSInf = sprintf("C11%s_%s_%d_R%s",$cAxes,$strDistAmps[$i],$ii+1,$strRandAmps[$ii]);
+          for ($j=0; $j<$nRands; $j++){
+            $auxInf = sprintf("%02d",$j+1);
+            $vs->$vsf(@{$hParams{$cStruct}});
+            $vs->distort_bvs("C11",$curAmp,$cAxes);
+            $::gFldDummy = "task_dummy";
+            new_struct_task_distortion($cStruct, ["randexisting",$j+1,$curRandAmp,$baseSInf], $nProcs, $vs, $hParams{$cStruct},\@kpts,$auxInf);
+            # $::gFldDummy = "task_dummy_vacancy";
+            # $auxInf = sprintf("%s_%s",$baseSInf,$auxInf);
+            # new_struct_task_distortion($cStruct, ["vacancy",$ii+1,$curRandAmp], $nProcs, $vs, $hParams{$cStruct},\@kpts,$auxInf);
+          }
+          $ii++;
+        }
+        $i++;
+      }
+      #print "\n";
+    }
+    foreach $cDist (@allDistortions) {
+      print "\n $cDist \n"; ## ========================================================== all other distortions
+      $i = 0;
+      foreach $curAmp (@distAmps) {
+        print "$curAmp   ->   \n";
+        $ii = 0;
+        foreach $curRandAmp (@randAmps){
+          $baseSInf = sprintf("%s_%s_%d_R%s",$cDist,$strDistAmps[$i],$ii+1,$strRandAmps[$ii]);
+          for ($j=0; $j<$nRands; $j++){
+            $auxInf = sprintf("%02d",$j+1);
+            $vs->$vsf(@{$hParams{$cStruct}});
+            $vs->distort_bvs($cDist,$curAmp);
+            $::gFldDummy = "task_dummy";
+            new_struct_task_distortion($cStruct, ["randexisting",$j+1,$curRandAmp,$baseSInf], $nProcs, $vs, $hParams{$cStruct},\@kpts,$auxInf);
+            # $::gFldDummy = "task_dummy_vacancy";
+            # $auxInf = sprintf("%s_%s",$baseSInf,$auxInf);
+            # new_struct_task_distortion($cStruct, ["vacancy",$ii+1,$curAmp], $nProcs, $vs, $hParams{$cStruct},\@kpts,$auxInf);
+          }
+          $ii++;
+        }
+        $i++;
+      }
+      #print "\n";
+    }
+  } ## end all structures
+
+  print "\n";
+} ## end mg_struct_TEST_dist_rand
 
 sub mg_struct_hcp_dist_rand_vacancy {
 
@@ -422,7 +530,7 @@ sub new_struct_task_distortion {
     $curAmp = $distParams[3];
   } elsif ($distT eq "randexisting"){
     $n = $distParams[1];
-    $strAux = sprintf("%s_re_%d_%s",$distParams[3],$n,$tpAuxStr);
+    $strAux = sprintf("%s_%s",$distParams[3],$n,$tpAuxStr);
     $curAmp = $distParams[2];
   }
   else {
@@ -538,7 +646,7 @@ sub test_1{
 
 sub write_pool_str{
   my $fh = $_[0];
-  my $pStr = sprintf("  %05d     %25s  %2d  %20s  %8s  %8d  %8d\n",
+  my $pStr = sprintf("  %05d     %35s  %2d  %20s  %8s  %8d  %8d\n",
     $_[1],$_[2],$_[3],$_[4],$_[5],$_[6],$_[7]);
   print $fh $pStr;
 }
@@ -592,7 +700,7 @@ sub new_task {
     write_log_line($::gDbgStr, "No Arrow");
     open(FPOOL, ">>$::gBasePath/$::gFnPool") or die "Could not open $::gFnPool: $!";
     print FPOOL ("## \$gBasePath = $::gBasePath\n## All paths are in Base Path. \n");
-    print FPOOL ("## nTask              name     nc          path           status     dNBeg     sNEnd\n");
+    print FPOOL ("## nTask                           name          nc          path           status      dNBeg     sNEnd\n");
     close FPOOL;
   }
   if ($foundData == 0){
