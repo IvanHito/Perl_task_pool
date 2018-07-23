@@ -11,8 +11,8 @@ our $gSubLevel = 0;
 our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
-##our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
-our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
+##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
@@ -101,10 +101,10 @@ sub mg_struct_hcp_dist_rand_vacancy {
   my @allAxes = ("x","y","z");
   ##my @allAxes = ("x");
 
-  print "Mg all structures with 10% cell param distortion. \n";
+  print "Mg all structures with 2% or 3% cell param distortion. \n";
   my $vs = vaspSTRUCT->new();
 
-  my @kpts = (2, 2, 2);
+  my @kpts = (8, 8, 8);
 
   print "\n$cStruct \n\n"; ## ==========================================================
   foreach $cAxes (@allAxes) {
