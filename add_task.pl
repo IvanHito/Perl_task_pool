@@ -12,12 +12,15 @@ our $gFnLog = "log";
 our $gFLog;
 our $gDbgStr;
 our $gBasePath = "/home/ivan/git/Perl_task_pool";      ## should be same as in manage_pool.pl
-##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## should be same as in manage_pool.pl
+##our $gBasePath = "/Users/ivanl/git/Perl_task_pool";    ## (MAC) should be same as in manage_pool.pl
 our $gFldData = "data";                                      ## should be same as in manage_pool.pl
 our $gFnPool = "pool";                                       ## should be same as in manage_pool.pl
 ##our $gFldDummy = "task_dummy_gre";
 our $gFldDummy = "task_dummy";
 our $gFldAllData = "all_data_files";
+##our $gFldAllData = "all_data_files_2_smRnd";
+
+our $gOnlyWriteXSF = 0;
 
 use lib "$::gBasePath";
 use vaspSTRUCT;
@@ -57,7 +60,10 @@ if ($ctrl eq "help"){
 ##mg_struct_set_2_distortion();
 ##mg_struct_hcp_vacancy();
 ##mg_struct_hcp_dist_rand_vacancy();
-mg_struct_TEST_dist_rand();
+##mg_struct_TEST_dist_rand();
+mg_struct_small_rand();
+
+print "\nDone \n\n";
 
 ###############################################################################
 ##                            sub declarations                               ##
@@ -67,6 +73,78 @@ mg_struct_TEST_dist_rand();
 #  ##   <<<   Input parameters   >>>   ##
 #  ##   <<<   ----------------   >>>   ##
 #}
+
+sub mg_struct_small_rand {
+
+  my $hcpA = $MG_HCP_A;       ## Angstrom
+  my $hcpC = $MG_HCP_C;       ## Angstrom
+  my $hcpG = $MG_HCP_G;       ## Degree
+  my $fccA = $MG_FCC_A;       ## Angstrom   ???
+  my $bccA = $MG_BCC_A;       ## Angstrom   ???
+  my $scA  = $MG_SC_A;        ## Angstrom   ???
+  my $dcA  = $MG_DIAMOND_A;   ## Angstrom   ???
+
+  my $nSamples = 10;
+  my $nRands = 1;
+  my $i; my $j; my $ii; my $cStruct = "hcp"; my $cAxes; my $cDist;
+  my $cA;
+  my $curAmp = 0.025;
+  my $strDistAmp = "0025";
+  my $curRandAmp = 0.02;
+  my $strRandAmp = "002";
+  my $structFun;
+  my $baseSInf = "";
+  my $auxInf = "";
+
+  my $strDescr = "na";
+  my $nProcs = 56;
+
+  #my @allStructs = ("hcp", "fcc", "bcc", "sc", "diamond");
+  my @allStructs = ("hcp");
+  my %hParams = (
+      "hcp"      => [$hcpA,$hcpC,$hcpG,1,1,1,"Mg"],
+      "fcc"      => [$fccA,$fccA,$fccA,1,1,1,"Mg"],
+      "bcc"      => [$bccA,$bccA,$bccA,1,1,1,"Mg"],
+      "sc"       => [$scA,$scA,$scA,2,2,2,"Mg"],
+      "diamond"  => [$dcA,$dcA,$dcA,1,1,1,"Mg"]
+    );
+
+  print "\nMg all structures with C11rand [-2.5, 2.5]% cell param rand distortion. \n";
+  my $vs = vaspSTRUCT->new();
+
+  my @kpts = (30, 30, 30);
+  my $vaspStrFuncBase = "new_struct_";
+  my $vsf = "";
+  $::gFldDummy = "task_dummy";
+
+  foreach $cStruct (@allStructs) {
+    $vsf = $vaspStrFuncBase.$cStruct;
+    print "\n$cStruct \n\n";
+    @kpts = (30,30,30);
+    if ($cStruct eq "diamond"){@kpts = (15,15,15)}
+    if ($cStruct eq "sc"){@kpts = (20,20,20)}
+    for ($i=0; $i<$nSamples; $i++){
+      ##
+      ##
+      $vs->$vsf(@{$hParams{$cStruct}});
+      new_struct_task_distortion($cStruct,
+                      ["C11rand",$i+1,$curAmp],
+                      $nProcs, $vs, $hParams{$cStruct},\@kpts,"pure");
+      #
+      $baseSInf = "C11rand";
+      for ($j=0; $j<$nRands; $j++){
+        $auxInf = sprintf("atomsRand_%02d",$j+1);
+        new_struct_task_distortion($cStruct,
+                        ["randexisting",$i+1,$curRandAmp,$baseSInf],
+                        $nProcs, $vs, $hParams{$cStruct},\@kpts,$auxInf);
+        #
+      }
+      $vs->my_default_vals();
+    }
+  } ## end all structures
+
+  print "\n";
+} ## end mg_struct_small_rand
 
 sub mg_struct_TEST_dist_rand {
 
@@ -490,13 +568,18 @@ sub new_struct_task {
   my $tInfo = sprintf("mg_%s_%1dx%1dx%1d_%s",$strType,$nC1,$nC2,$nC3,$strAux);
   print "   Struct task $tInfo\n";
   ##print "   Kpoints: @kpts \n";
-  my $tPath = new_task($tInfo,$nProcs,1);
-  my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
-  my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
   my $structFun = "new_struct_$strType";
   $vs->$structFun(@strParams);
-  $vs->write_poscar($fnPscr);
-  create_KPOINTS($fnKpts,@kpts);
+  if (! $gOnlyWriteXSF)
+  {
+    my $tPath = new_task($tInfo,$nProcs,1);
+    my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+    my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
+    $vs->write_poscar($fnPscr);
+    create_KPOINTS($fnKpts,@kpts);
+  }
+  else { print "    Only writing xsf file\n"}
+
   my $fnXsf = "$::gFldAllData/$tInfo.xsf";
   $vs->write_xsf($fnXsf);
 }
@@ -530,7 +613,7 @@ sub new_struct_task_distortion {
     $curAmp = $distParams[3];
   } elsif ($distT eq "randexisting"){
     $n = $distParams[1];
-    $strAux = sprintf("%s_%s",$distParams[3],$n,$tpAuxStr);
+    $strAux = sprintf("%s_%d_%s",$distParams[3],$n,$tpAuxStr);
     $curAmp = $distParams[2];
   }
   else {
@@ -572,6 +655,13 @@ sub new_struct_task_distortion {
     $distFun = "distort_pos";
     $vs->$distFun($curAmp);
   }
+  elsif ($distT eq "C11rand"){
+    if ($vs->isDefined() ne "OK"){
+      print "ERROR!!! Structure is not defined for C11rand !!! \n";
+      return;
+    }
+    $vs->distort_bvs("C11rand",$curAmp,"");
+  }
   else {
     my $structFun = "new_struct_$strType";
     $vs->$structFun(@strParams);
@@ -589,18 +679,24 @@ sub new_struct_task_distortion {
     }
   }
 
+
   my $tInfo = sprintf("mg_%s_%s",$strType,$strAux);
   print "   Struct task $tInfo  Dist Amp = $curAmp\n";
-  my $tPath = new_task($tInfo,$nProcs,1);
-  my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
-  my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
+  if (! $gOnlyWriteXSF)
+  {
+    my $tPath = new_task($tInfo,$nProcs,1);
+    my $fnPscr = "$::gBasePath/$::gFldData/$tPath/VASP/POSCAR";
+    my $fnKpts = "$::gBasePath/$::gFldData/$tPath/VASP/KPOINTS";
 
-  ##my @kpts = calc_kpts($vs->baseVs);
-  $vs->write_poscar($fnPscr);
-  create_KPOINTS($fnKpts,@kpts);
+    ##my @kpts = calc_kpts($vs->baseVs);
+    $vs->write_poscar($fnPscr);
+    create_KPOINTS($fnKpts,@kpts);
+  }
+  else { print "    Only writing xsf file\n"}
+
   my $fnXsf = "$::gFldAllData/$tInfo.xsf";
   $vs->write_xsf($fnXsf);
-}
+} ## end new_struct_task_distortion
 
 sub gre_1{
   ##   <<<   Input parameters   >>>   ##

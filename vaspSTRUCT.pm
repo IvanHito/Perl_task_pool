@@ -33,6 +33,7 @@ has ainfC            => ( is => "rw" );
 my $VALUNDEF  = "undefined";
 my $VALOK     = "OK";
 my $FNPOSCAR  = "POSCAR";
+my $FNOMXOUT  = "openmxout";
 my $FNXSF     = "COORDS.xsf";
 my $PRINTDBG  = 0;
 my @aRefNames = ( "baseVs",         # array of names which can be recopied
@@ -145,7 +146,7 @@ sub new_struct_hcp {
   $self->struct_base();
 }
 
-## <<<<<<<<<<<<<<<<<<<<<<<============================================= !!! 
+## <<<<<<<<<<<<<<<<<<<<<<<============================================= !!!
 sub new_struct_hcp_v {
   my $self = shift;
   ##   <<<   Input parameters   >>>   ##
@@ -538,6 +539,95 @@ sub new_from_poscar {
   #print "\n";
 } ## new_from_poscar
 
+sub new_from_omx_stdout {
+  my $self = shift;
+  if ($self->isDefined eq $VALOK){
+    print "Warning!!! Previous structure will be destroyed\n";
+  }
+  ##   <<<   Input parameters   >>>   ##
+  my $fn = $_[0] // $FNOMXOUT;
+  ##   <<<   ----------------   >>>   ##
+  my $i = 0; my $j = 0; my $ix = 0; my $iy = 0;
+  my $cl;
+  my @arrLine;
+  my @baseVectors = map {[0,0,0]} 1..3;
+  my $nAtoms;
+  my $nTypes;
+  my $cTp;
+  my @atpNames;
+  my @atpNums;
+  my @ainfD;
+  my @ainfC;
+  my $cell_factor = -1.0;
+  $self->my_default_vals();
+  open(FOO, "<$fn") or die "Could not open $fn: $!";
+  while (defined($cl = <FOO>)){
+    chomp $cl; $cl =~ s/^\s+//;
+    @arrLine = split /\s+/, $cl;
+    if($arrLine[0] eq "Atoms.UnitVectors.Unit"){
+      if($arrLine[1] eq "AU"){
+        $cell_factor = 0.5291772;
+      }
+      elsif($arrLine[1] eq "Ang"){
+        $cell_factor = 1.0;
+      }
+      else{
+        print "Check Atoms.UnitVectors.Unit, it should be AU or Ang.\n";
+        exit(0);
+      }
+      next;
+    }
+    if($arrLine[0] eq "<Atoms.UnitVectors"){
+      if($cell_factor < 0.0){
+        print "Atoms.UnitVectors.Unit should come before Atoms.UnitVectors.\n";
+        exit(0);
+      }
+      for ($i=0; $i<3; $i++){
+        $cl = <FOO>;
+        chomp $cl; $cl =~ s/^\s+//;
+        @arrLine = split /\s+/, $cl;
+        for ($j=0; $j<3; $j++){$baseVectors[$i][$j] = $arrLine[$j] * $cell_factor}
+      }
+      $self->baseVs(@baseVectors);
+      $self->nCellsArr([1,1,1]);
+      next;
+    }
+    # Atoms.Number
+    if($arrLine[0] eq "Atoms.Number"){
+      $nAtoms = $arrLine[1];
+      $self->nAtoms($nAtoms);
+      next;
+    }
+    if($arrLine[0] eq "Atoms.SpeciesAndCoordinates.Unit"){
+      if($arrLine[1] ne "FRAC"){
+        print "Atoms.SpeciesAndCoordinates.Unit should be FRAC.";
+        exit(0);
+      }
+      next;
+    }
+    if($arrLine[0] eq "Atoms.SpeciesAndCoordinates"){
+      # Coordinates
+      $i = 0;
+      while($i < $nAtoms){
+        $cl = <FOO>;
+        $i++;
+        chomp $cl; $cl =~ s/^\s+//;
+        @arrLine = split /\s+/, $cl;
+        push(@ainfD,[$arrLine[2],$arrLine[3],$arrLine[4]]);
+        my @cvAC = (0,0,0);
+        for ($ix = 0; $ix<3; $ix++){
+          for ($iy = 0; $iy<3; $iy++){$cvAC[$ix] += $ainfD[$i-1][$iy]*$baseVectors[$iy][$ix]}
+        }
+        push(@ainfC, \@cvAC);
+        $cTp
+      }
+    }## atomic coordinates
+  }## openmx stdout reading
+  ## <<<<<<<<<<<<<===============--------------
+  ## TODO : atom types capture!!!
+  ## <<<<<<<<<<<<<===============--------------
+} ## new_from_omx_stdout
+
 sub distort_bvs {
   my $self = shift;
   if ($self->isDefined ne $VALOK){
@@ -573,6 +663,15 @@ sub distort_bvs {
   if ($dType eq "CP"){
     $T[1][1] = -0.5;
     $T[2][2] = -0.5;
+  }
+  if ($dType eq "C11rand"){
+    @T = map {[0,0,0]} 1..3;
+    my $randAmp = 0;
+    for ($i=0; $i<3; $i++){
+      $randAmp = 2*(rand() - 0.5)*$dAmp/$bVMods[$i];
+      $T[$i][$i] = 1 + $randAmp;
+    }
+    $dAmp = 1.0;
   }
   ## V0 is default
   @HD = $self->mat3_mult($self->baseVs,\@T);
